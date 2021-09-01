@@ -1,0 +1,21 @@
+Package: signtrans
+Type: Package
+Title: Simple and Flexible Sign and Rank-Based Methods for Testing Differential Abundance in Micorbiome Studies
+Version: 0.0.0
+Authors@R: 
+    c(person(given = "Leyla",
+           family = "Kodalci",
+           role = c("aut","cre"),
+           email = "leyla.kodalci@uhasselt.be"),
+    person(given = "Olivier",
+           family = "Thas",
+           role = c("aut"),
+           email = "olivier.thas@uhasselt.be"))
+Description: signtrans computes two types of transformations (S and R-sign) of the read counts, which are used as outcome variable in logistic regression models (S-sign) and probabilistic index models (R-sign). These methods can be used to test for differential abundance between groups marginally or conditionally, depending on the research question. 
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.1.1.9001
+Imports: boot,logistf,pim,phyloseq
+Suggests: knitr,rmarkdown
+VignetteBuilder: knitr

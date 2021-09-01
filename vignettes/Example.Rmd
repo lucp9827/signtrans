@@ -1,0 +1,524 @@
+---
+title: "Example"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Example}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# 0. Load data & necessary packages
+
+The data used for this case study comes from Zeller et al.(2014). We will only analyse the 16S rRNA count data of 129 fecal sample. The objective is to identify differences in microbial composition between 41 colorectal cancer (CRC) patients and 75 control patients. 
+
+
+**Reference:**
+Zeller G, Tap J, Voigt AY, Sunagawa S, Kultima JR, Costea PI, Amiot A, Böhm J, Brunetti F, Habermann N, Hercog R, Koch M, Luciani A, Mende DR, Schneider MA, Schrotz-King P, Tournigand C, Tran Van Nhieu J, Yamada T, Zimmermann J, Benes V, Kloor M, Ulrich CM, von Knebel Doeberitz M, Sobhani I, Bork P. Potential of fecal microbiota for early-stage detection of colorectal cancer. Mol Syst Biol. 2014 Nov 28;10(11):766. doi: 10.15252/msb.20145645. PMID: 25432777; PMCID: PMC4299606.
+
+
+```{r, include=FALSE}
+# Load Packages:
+
+library(signtrans)
+library(phyloseq)
+library(microbiome)
+library(dacomp)
+library(knitr)
+library(logistf)
+library(boot)
+library(pim)
+
+# Load Data:
+
+data("Zeller2014_CRC")
+data<-Zeller2014_CRC
+```
+
+# 1. Data Preparation
+
+Before analyses, we will pre-process the data. First, we merge the taxa counts on genus level to reduce the high dimensionality. Second, we clean the data by removing samples with no group allocation and trim the taxa with a prevalence smaller than 5%. Third, we convert the grouping variable into a binary variable and define sample variables which will be used in the analysis. We will only keep these defined sample variables in the resulting phyloseq data object. Finally, we make sure the samples are the rows of the count table and the taxa the columns. 
+
+```{r}
+# Merge taxa counts on genus level (reduces dimensionality)
+
+data_glom<-tax_glom(data, "Genus")
+
+# Remove samples with no group allocation - (if necessary -> data dependent)
+
+data_clean<-subset_samples(data_glom, DiseaseState %in% c("H", "CRC"))
+
+# Remove taxa with a prevalence <5% (i.e. taxa with a non-zero count in <5% of the samples) = default Trim function
+
+data_trim<-Trim(data_clean)
+
+# Convert group variable from 'character' variable to 'numeric' binary (0/1) variable  
+
+sample_data(data_trim)$group<-ifelse(sample_data(data_trim)$Group=="Control",0,1)
+
+# Keep only the samplevariables which you will take into account (library size is automatically taken into account for the conditional & RI methods) 
+
+sample_data(data_trim)$age<-sample_data(data_trim)$Age..years.
+
+sample_data(data_trim)$gender<-sample_data(data_trim)$Gender
+sample_data(data_trim)$gender<-ifelse(sample_data(data_trim)$gender=="M",0,1) # Convert into a binary variable
+
+
+#sampledata= sample_data(data_trim)[,c("group","age","gender")]
+#sampledata= sample_data(data_trim)[,c("group","age")]
+sampledata= sample_data(data_trim)[,c("group")]
+sample_data(data_trim)<-sampledata
+
+# Format convention: samples should be in rows, and taxa in columns
+
+if(taxa_are_rows(data_trim)){data_res=t(data_trim)}else{data_res=data_trim}
+```
+
+## 1.1 Summarize Final data 
+
+In this subsection, we summarize the pre-processed data. We define the number of samples and taxa, and compute several descriptive statistics (e.g. median read counts, sparsity,...) by using the function *summarize_phyloseq* from the *microbiome* package. As last, we produce a boxplot to compare the library sizes between groups and other sample variables (e.g. gender). 
+
+```{r}
+# Number of samples
+
+n_samples=nsamples(data_res)
+n_samples
+
+# Number of taxa
+
+n_taxa=ntaxa(data_res)
+n_taxa
+
+# Summary statistics
+
+summarize_phyloseq(data_res) # requires micrbiome package
+
+# Plot library sizes
+
+libsize <- sample_sums(data_res)
+
+data_res_0 <- subset_samples(data_res,group==0)
+libsize_0 <- sample_sums(data_res_0)
+
+data_res_1<-subset_samples(data_res,group==1)
+libsize_1 <- sample_sums(data_res_1)
+
+# data_res_M <- subset_samples(data_res,gender==0)
+# libsize_M <- sample_sums(data_res_M)
+#  
+# data_res_F<-subset_samples(data_res,gender==1)
+# libsize_F <- sample_sums(data_res_F)
+
+boxplot(libsize,libsize_0,libsize_1, names=c('All','Group 0',"Group 1"),ylab="Library size",main='Library size distribution')
+```
+# 2. Select Reference frame (~DACOMP)
+
+We use DACOMP to select a reference frame for the analyses with the S-and R-sign methods. To choose the right median threshold, we plot the reference scores. We use the chosen median threshold to select a reference frame and compute the average of this reference frame (function = Select_Ref_frame). 
+The final output consists of a list (final) with
+
+1. a phyloseq object where the reference frame is pruned out (data_final), 
+
+2. a vector with the average of the reference frame (ref_mean).  
+
+
+**Reference:**
+Brill, B., Amir, A., & Heller, R. (2019). Testing for differential abundance in compositional counts data, with application to microbiome studies. arXiv preprint arXiv:1904.08937.
+
+```{r}
+
+# The following codes are to define Median threshold 
+
+# Convert otu table to a matrix for dacomp.select_references 
+
+counts<-as(otu_table(data_res), "matrix") # input dacomp.select_references, samples HAVE to be in rows!!  
+
+# Selection reference frame to define median threshold 
+
+result.selected.references <- dacomp.select_references(counts,median_SD_threshold=2.1,verbose = T)# Verbose = TRUE: prints computation progress
+
+# Plot the reference selection scores (can be used to better set the median SD threshold) ~2.1
+
+dacomp.plot_reference_scores(result.selected.references)
+
+
+# Select Reference frame and compute the average
+
+final <- Select_Ref_frame(data_res,threshold=2.1)
+```
+
+
+
+# 3. Sign methods (S-sign and R-sign)
+
+Two types of data transformations are used:
+
+1. the S-sign $I_{it}^S=I(N_{it}\leq R_i)$,
+
+2. the R-sign $I_{ijt}^R=I(N_{it}/R_i \leq N_{jt}/R_j)$. 
+
+
+These data transformations are used as outcome variables in logistic regression models (S-sign) or/and probabilistic index models (R-sign) to test the following null hypotheses: 
+
+1.  *Marginal-S null hypotheses*
+
+$H_0: P(N \leq R|A=0)= P(N \leq R|A=1)$
+
+2.  *Conditional-S null hypotheses*
+
+$H_0: P(N \leq R|A=0,L=l)= P(N \leq R|A=1,L=l)$
+
+3.  *Marginal-R null hypotheses*
+
+$H_0: P(N/R \leq N^*/R^*|A=0,A^*=1)=1/2$
+
+4.  *Conditional-R null hypotheses*
+
+$H_0: P(N/R \leq N^*/R^*|A=0,A^*=1,L=L^*)=1/2$
+
+note: $\leq$ is the probabilistic index
+
+The regression imputation (RI) method is used to test the marginal null hypothesis, while still accounting for sample variables. 
+
+By using logistic and probabilistic index models, the original null hypotheses simplifies to $H_0=\beta_A =0$
+
+## 3.1 S-sign methods
+
+To apply the S-sign methods, we need the following:
+
+1. formula, which is the model with sample variables to account for (which were specified and kept in data_final). **The order of variables in the model should follow the order of variables in data_final and include all variables found in data_final.**
+
+2. startdata (data_final), which is a phyloseq object with tha raw counts of the taxa and the sample variables that will be taken into account
+
+3. dataframe (db) with the raw counts of a taxon (column 1) and the average of the reference frame (column 2)
+
+4. library size (sum of all the counts per sample), which is added to the startdata (data_final) as last sample variable 
+
+5. Method to apply: "Marginal", "Conditional", "RI", "All" 
+
+### 3.1.1 Testing 1 taxon
+
+In this subsection, we will use the S-sign methods to test for differential abundance of 1 taxon.
+
+```{r}
+# Define data 
+
+ref_mean = final$ref_mean
+
+data_final = final$data_final 
+
+# Define Taxon to test
+
+index <- 'd__denovo228'
+
+# Define a dataframe with raw count of 1 taxon (column 1) and the average reference frame (column 2)
+
+db <- data.frame(counts=as.vector(data_final@otu_table[,index]),ref=ref_mean) # db[,1]= count taxa, db[,2] = mean reference frame
+
+# Compute Library size
+  
+libsize <- sample_sums(data_final)
+
+# Define starting sample data (add libsize)
+
+sample_data(data_final)$libsize<-libsize
+
+# Define model to be tested 
+
+formula = PO~ factor(group) + libsize
+
+# Apply S_sign methods (Method = 'Marginal' or 'Conditional' or 'RI' or 'All', default = 'All')
+
+set.seed(seed=9827) # Important for bootstrap method in S_sign_RI
+S_sign_results<-S_sign(formula,db,startdata=data_final,Method="All")
+
+
+# Summarize results 
+
+Coef<-c(S_sign_results$Marginal$Coefficients[2],
+S_sign_results$Conditional$Coefficients[2],
+S_sign_results$RI$Coefficients[1])
+
+stand_dev<- c(sqrt(S_sign_results$Marginal$Variance[2,2]),
+sqrt(S_sign_results$Conditional$Variance[2,2]),
+sqrt(S_sign_results$RI$Variance))
+
+pval<- c(S_sign_results$Marginal$Pval,
+S_sign_results$Conditional$Pval,
+S_sign_results$RI$Pval)
+
+
+result<- data.frame(Estimate=Coef,Stand.dev=stand_dev,pvalue=pval)
+rownames(result)= c("Marginal","Conditional",'RI')
+
+knitr::kable(result, "simple", caption = "Estimates of the effect size parameter $\beta^A$ (log-scale)", digits=6)
+```
+
+
+### 3.1.2 Testing all taxa
+
+In this subsection, we will use the S-sign methods to test for differential abundance of all taxa. After which we apply the benjamini and hochberg procedure to correct for multiple testing. 
+
+```{r warning=FALSE}
+
+# Define data 
+
+ref_mean = final$ref_mean
+
+data_final = final$data_final 
+
+
+S_sign_results_all<-list()
+
+for (i in (1:ntaxa(data_final))){
+  
+# Define a dataframe with raw count of 1 taxon (column 1) and the average reference frame (column 2)
+
+db <- data.frame(counts=as.vector(data_final@otu_table[,i]),ref=ref_mean) # db[,1]= count taxa, db[,2] = mean reference frame
+
+# Compute Library size
+  
+libsize <- sample_sums(data_final)
+
+# Define starting sample data
+
+sample_data(data_final)$libsize<-libsize
+
+# Define model to be tested 
+
+formula= PO~ factor(group) + libsize
+
+# Apply S_sign methods (Method = 'Marginal' or 'Conditional' or 'RI' or 'All', default = 'All')
+
+set.seed(seed=9827) # Important for bootstrap method in S_sign_RI
+S_sign_results_all[[i]]<-S_sign(formula,db,startdata=data_final,Method="All")
+
+}
+
+names(S_sign_results_all)<-colnames(otu_table(data_final))
+
+# Multiple Testing correction (Bejamini and Hochberg adjustemnt)
+
+pval_Marginal <- c()
+pval_Conditional <- c()
+pval_RI <- c()
+
+
+for (i in (1:ntaxa(data_final))){
+pval_Marginal <- cbind(pval_Marginal ,S_sign_results_all[[i]]$Marginal$Pval)
+pval_Conditional <- cbind(pval_Conditional,S_sign_results_all[[i]]$Conditional$Pval)
+pval_RI <- cbind(pval_RI,S_sign_results_all[[i]]$RI$Pval)
+
+}
+
+pval_Marginal_adjP <- p.adjust(pval_Marginal,method='BH') 
+pval_Conditional_adjP <- p.adjust(pval_Conditional,method='BH')
+pval_RI_adjP <- p.adjust(pval_RI,method='BH')
+
+# Add adjusted p-value to the results list
+
+for (i in (1:ntaxa(data_final))){
+S_sign_results_all[[i]]$Marginal$adjP <- pval_Marginal_adjP[i]
+S_sign_results_all[[i]]$Conditional$adjP <- pval_Conditional_adjP[i]
+S_sign_results_all[[i]]$RI$adjP <- pval_RI_adjP[i]
+
+}
+
+# Summarize results 
+
+Coef<-c(S_sign_results_all[['d__denovo228']]$Marginal$Coefficients[2],
+S_sign_results_all[['d__denovo228']]$Conditional$Coefficients[2],
+S_sign_results_all[['d__denovo228']]$RI$Coefficients[1])
+
+stand_dev<- c(sqrt(S_sign_results_all[['d__denovo228']]$Marginal$Variance[2,2]),
+sqrt(S_sign_results_all[['d__denovo228']]$Conditional$Variance[2,2]),
+sqrt(S_sign_results_all[['d__denovo228']]$RI$Variance))
+
+pval<- c(S_sign_results_all[['d__denovo228']]$Marginal$Pval,
+S_sign_results_all[['d__denovo228']]$Conditional$Pval,
+S_sign_results_all[['d__denovo228']]$RI$Pval)
+
+pval_adj<- c(S_sign_results_all[['d__denovo228']]$Marginal$adjP,
+S_sign_results_all[['d__denovo228']]$Conditional$adjP,
+S_sign_results_all[['d__denovo228']]$RI$adjP)
+
+
+result<- data.frame(Estimate=Coef,Stand.dev=stand_dev,pvalue=pval, adj.pvalue=pval_adj)
+rownames(result)= c("Marginal","Conditional",'RI')
+
+knitr::kable(result, "simple", caption = "Estimates of the effect size parameter $\beta^A$ (log-scale)", digits=6)
+
+```
+
+
+
+## 3.2 R-sign methods 
+
+To apply the R-sign methods, we need the following:
+
+1. formula, which is the model with sample variables to account for (which were specified and kept in data_final). **The order of variables in the model should follow the order of variables in data_final and include all variables found in data_final.**
+
+2. startdata (data_final), which is a phyloseq object with tha raw counts of the taxa and the sample variables that will be taken into account
+
+3. dataframe (db) with the raw counts of a taxon (column 1) and the average of the reference frame (column 2)
+
+4. library size (sum of all the counts per sample), which is added to the startdata (data_final) as last sample variable 
+
+5. Method to apply: "Marginal", "Conditional", "RI", "All" 
+
+### 3.2.1 Testing 1 taxon
+
+In this subsection, we will use the R-sign methods to test for differential abundance of 1 taxon.
+
+```{r}
+# Define data 
+
+ref_mean = final$ref_mean
+
+data_final = final$data_final 
+
+# Define Taxon to test
+
+index <- 'd__denovo228'
+
+# Define a dataframe with raw count of 1 taxon (column 1) and the average reference frame (column 2)
+
+db <- data.frame(counts=as.vector(data_final@otu_table[,index]),ref=ref_mean) # db[,1]= count taxa, db[,2] = mean reference frame
+
+# Compute Library size
+  
+libsize <- sample_sums(data_final)
+
+# Define starting sample data
+
+sample_data(data_final)$libsize<-libsize
+
+# Define model to be tested
+
+formula=RATIO~factor(group)+libsize
+
+# Apply R_sign methods (Method = 'Marginal' or 'Conditional' or 'RI' or 'All', default = 'All')
+
+R_sign_results<-R_sign(formula,db,startdata=data_final,Method="All")
+
+# Summarize results 
+
+Coef<-c(R_sign_results$Marginal$Coefficients[1],
+R_sign_results$Conditional$Coefficients[1],
+R_sign_results$RI$Coefficients[1])
+
+stand_dev<- c(sqrt(R_sign_results$Marginal$Variance),
+sqrt(R_sign_results$Conditional$Variance[1,1]),
+sqrt(R_sign_results$RI$Variance))
+
+pval<- c(R_sign_results$Marginal$Pval,
+R_sign_results$Conditional$Pval,
+R_sign_results$RI$Pval)
+
+
+result<- data.frame(Estimate=Coef,Stand.dev=stand_dev,pvalue=pval)
+rownames(result)= c("Marginal","Conditional",'RI')
+
+knitr::kable(result, "simple", caption = "Estimates of the effect size parameter $\beta^A$ (logit-scale)", digits=6)
+
+```
+
+
+### 3.2.2 Testing all taxa
+
+In this subsection, we will use the R-sign methods to test for differential abundance of all taxa. After which we apply the benjamini and hochberg procedure to correct for multiple testing. 
+
+```{r}
+
+# Define data 
+
+ref_mean = final$ref_mean
+
+data_final = final$data_final 
+
+
+R_sign_results_all<-list()
+
+for (i in (1:ntaxa(data_final))){
+  
+# Define a dataframe with raw count of 1 taxon (column 1) and the average reference frame (column 2)
+
+db <- data.frame(counts=as.vector(data_final@otu_table[,i]),ref=ref_mean) # db[,1]= count taxa, db[,2] = mean reference frame
+
+# Compute Library size
+  
+libsize <- sample_sums(data_final)
+
+# Define starting sample data
+
+sample_data(data_final)$libsize<-libsize
+
+# Define model to be tested 
+
+formula = RATIO~factor(group)+libsize
+
+# Apply R_sign methods (Method = 'Marginal' or 'Conditional' or 'RI' or 'All', default = 'All')
+
+R_sign_results_all[[i]]<-R_sign(formula,db,startdata=data_final,Method="All")
+
+}
+
+names(R_sign_results_all)<-colnames(otu_table(data_final))
+
+# Multiple Testing correction (Bejamini and Hochberg adjustemnt)
+
+pval_Marginal <- c()
+pval_Conditional <- c()
+pval_RI <- c()
+
+
+for (i in (1:ntaxa(data_final))){
+pval_Marginal <- cbind(pval_Marginal ,R_sign_results_all[[i]]$Marginal$Pval)
+pval_Conditional <- cbind(pval_Conditional,R_sign_results_all[[i]]$Conditional$Pval)
+pval_RI <- cbind(pval_RI,R_sign_results_all[[i]]$RI$Pval)
+
+}
+
+pval_Marginal_adjP <- p.adjust(pval_Marginal,method='BH') 
+pval_Conditional_adjP <- p.adjust(pval_Conditional,method='BH')
+pval_RI_adjP <- p.adjust(pval_RI,method='BH')
+
+# Add adjusted p-value to the results list
+
+for (i in (1:ntaxa(data_final))){
+R_sign_results_all[[i]]$Marginal$adjP <- pval_Marginal_adjP[i]
+R_sign_results_all[[i]]$Conditional$adjP <- pval_Conditional_adjP[i]
+R_sign_results_all[[i]]$RI$adjP <- pval_RI_adjP[i]
+
+}
+
+# Summarize results 
+
+Coef<-c(R_sign_results_all[['d__denovo228']]$Marginal$Coefficients[1],
+R_sign_results_all[['d__denovo228']]$Conditional$Coefficients[1],
+R_sign_results_all[['d__denovo228']]$RI$Coefficients[1])
+
+stand_dev<- c(sqrt(R_sign_results_all[['d__denovo228']]$Marginal$Variance),
+sqrt(R_sign_results_all[['d__denovo228']]$Conditional$Variance[1,1]),
+sqrt(R_sign_results_all[['d__denovo228']]$RI$Variance))
+
+pval<- c(R_sign_results_all[['d__denovo228']]$Marginal$Pval,
+R_sign_results_all[['d__denovo228']]$Conditional$Pval,
+R_sign_results_all[['d__denovo228']]$RI$Pval)
+
+pval_adj<- c(R_sign_results_all[['d__denovo228']]$Marginal$adjP,
+R_sign_results_all[['d__denovo228']]$Conditional$adjP,
+R_sign_results_all[['d__denovo228']]$RI$adjP)
+
+
+result<- data.frame(Estimate=Coef,Stand.dev=stand_dev,pvalue=pval, adj.pvalue=pval_adj)
+rownames(result)= c("Marginal","Conditional",'RI')
+
+knitr::kable(result, "simple", caption = "Estimates of the effect size parameter $\beta^A$ (logit-scale)", digits=6)
+
+```
