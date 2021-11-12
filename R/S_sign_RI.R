@@ -9,7 +9,7 @@
 
 S_sign_RI<-function(formula,data) {
 
-  OR_boot_values <- boot(data = data, statistic = OR_boot,R = 200,formula = formula) # OR_boot needs adjustment depending on auxiliary variables
+  OR_boot_values <- boot(data = data, statistic = OR_boot,R = 100,formula = formula) # OR_boot needs adjustment depending on auxiliary variables
 
   est_coef <- mean(OR_boot_values$t)
   est_var <- var(OR_boot_values$t)

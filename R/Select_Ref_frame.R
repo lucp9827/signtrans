@@ -8,7 +8,7 @@
 #' @import phyloseq
 #' @import dacomp
 #' @export
-Select_Ref_frame <- function(data,threshold){
+Select_Ref_frame <- function(data,threshold,stat=mean){
 
 # Convert otu table to a matrix for dacomp.select_references
 
@@ -24,7 +24,7 @@ ref_counts<-prune_taxa(colnames(counts)[result.selected.references$selected_refe
 
 # Compute mean number of counts in the reference frame (must be postive)
 
-ref_mean  <- apply(data.frame(otu_table(ref_counts)),1,mean)
+ref_mean  <- apply(data.frame(otu_table(ref_counts)),1,stat)
 
 # Define count table without reference frame
 
