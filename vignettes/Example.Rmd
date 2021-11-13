@@ -27,6 +27,8 @@ Zeller G, Tap J, Voigt AY, Sunagawa S, Kultima JR, Costea PI, Amiot A, Böhm J, 
 # Load Packages:
 
 library(signtrans)
+
+library(devtools) install_github("lucp9827/signtrans")
 library(phyloseq)
 library(microbiome)
 library(dacomp)
@@ -140,7 +142,7 @@ counts<-as(otu_table(data_res), "matrix") # input dacomp.select_references, samp
 
 # Selection reference frame to define median threshold 
 
-result.selected.references <- dacomp.select_references(counts,median_SD_threshold=2.1,verbose = T)# Verbose = TRUE: prints computation progress
+result.selected.references <- dacomp.select_references(counts,median_SD_threshold=1.307625,verbose = T)# Verbose = TRUE: prints computation progress
 
 # Plot the reference selection scores (can be used to better set the median SD threshold) ~2.1
 
@@ -149,7 +151,7 @@ dacomp.plot_reference_scores(result.selected.references)
 
 # Select Reference frame and compute the average
 
-final <- Select_Ref_frame(data_res,threshold=2.1)
+final <- Select_Ref_frame(data_res,threshold=1.307625,stat=mean)
 ```
 
 

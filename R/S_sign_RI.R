@@ -7,15 +7,18 @@
 #' @import boot
 #' @export
 
-S_sign_RI<-function(formula,data) {
+S_sign_RI<-function(formula,data,procedure="boot",B=100) {
 
-  OR_boot_values <- boot(data = data, statistic = OR_boot,R = 100,formula = formula) # OR_boot needs adjustment depending on auxiliary variables
+  if (procedure =="boot"){
+  OR_boot_values <- boot(data = data, statistic = OR_boot,R = B,formula = formula) # OR_boot needs adjustment depending on auxiliary variables
 
   est_coef <- mean(OR_boot_values$t)
   est_var <- var(OR_boot_values$t)
 
   est_teststat <- est_coef / sqrt(est_var)
   est_pval <- 2*pnorm(-abs(est_teststat))
+  }
+
 
   res <- list(Coefficients= est_coef, Variance = est_var, Teststatistic = est_teststat, Pval=est_pval)
 
