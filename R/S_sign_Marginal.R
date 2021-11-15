@@ -8,7 +8,7 @@
 
 S_sign_Marginal <- function(data) {
 
-est <- logistf(PO ~ group, control= logistf.control( maxit=5000),data=data)
+est <- logistf(PO ~ as.factor(group) , control= logistf.control( maxit=5000),data=data)
 est_coef <- est$coefficients
 est_var <- vcov(est)
 

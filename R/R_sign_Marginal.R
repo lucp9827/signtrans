@@ -13,7 +13,7 @@ R_sign_Marginal<-function(data){
   # RATIO[is.infinite(RATIO)]<-9999999
   # RATIO[is.na(RATIO)]<-9999999
 
-  est<-pim(formula=RATIO~ group  ,link="logit",estim =estimator.glm,vcov.estim = sandwich.vcov,keep.data = TRUE,data=data)
+  est<-pim(formula=RATIO~ as.factor(group)  ,link="logit",estim =estimator.glm,vcov.estim = sandwich.vcov,keep.data = TRUE,data=data)
 
   est_coef <- coef(est)
   est_var <- vcov(est)
