@@ -10,7 +10,7 @@
 
 #' @return list of results: S_sign_Marginal & S_sign_Conditional --> 1) logistic regression fit 2) estimated coefficients 3) estimated variance covariance matrix 4) Teststatistic 5) p-value AND S_sign_RI --> 1) estimated coefficients 2) estimated variance covariance matrix 3) Teststatistic 4) p-value
 
-S_sign <-function(formula, Method="All", db, startdata,procedure="boot",B=100 ...) {
+S_sign <-function(formula, Method="All", db, startdata,procedure="boot",B=100, ...) {
 
   # Compute difference (taxa count - ref count)
 
