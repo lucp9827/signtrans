@@ -14,7 +14,7 @@ R_sign_RI<-function(formula, data,alpha=0.05){
    x = data[,-c(1,2)]
 
   n<-length(data$RATIO)
-  p<-sum(data$group)/n
+  p<-sum(data$group==1)/n
 
   x<-as.matrix(x)
   # Point estimate:
