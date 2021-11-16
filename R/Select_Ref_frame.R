@@ -20,7 +20,7 @@ result.selected.references <- dacomp.select_references(counts,median_SD_threshol
 
 # Define counts of reference frame
 
-ref_counts<-prune_taxa(colnames(counts)[result.selected.references$selected_references[1:nr]],data)
+ref_counts<-prune_taxa(colnames(counts)[result.selected.references$selected_references[1:min(nr,length(result.selected.references$selected_references))]],data)
 
 # Compute mean number of counts in the reference frame (must be postive)
 
@@ -28,7 +28,7 @@ ref_mean  <- apply(data.frame(otu_table(ref_counts)),1,stat)
 
 # Define count table without reference frame
 
-data_final<-prune_taxa(colnames(counts)[-result.selected.references$selected_references[1:nr]],data)
+data_final<-prune_taxa(colnames(counts)[-result.selected.references$selected_references[1:min(nr,length(result.selected.references$selected_references))]],data)
 
 return(list(data_final = data_final,ref_mean =ref_mean))
 
