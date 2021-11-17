@@ -46,9 +46,9 @@ S_sign_RI<-function(formula,data,procedure="boot",B=100) {
 
     gW<-sum(data[,'group']==1)/length(data[,'group'])
 
-    D1 <- (data[,'group']/gW) *(PO- pred1) + pred1 - Q1
+    D1 <- (data[,'group']/gW) *(data[,'PO']- pred1) + pred1 - Q1
 
-    D0 <- ((1-data[,'group'])/(1-gW )) * (PO- pred0) + pred0 - Q0
+    D0 <- ((1-data[,'group'])/(1-gW )) * (data[,'PO']- pred0) + pred0 - Q0
 
     EIC <- (1/(Q1*(1-Q1))) * D1 - (1/(Q0*(1-Q0))) * D0
 
