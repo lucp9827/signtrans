@@ -56,7 +56,7 @@ S_sign_RI<-function(formula,data,procedure="boot",B=100) {
 
     est_teststat<-(est_coef)/(sqrt(est_var))
 
-    pval_augsign<-2*pnorm(-abs(est_teststat))
+    est_pval<-2*pnorm(-abs(est_teststat))
     }
 
 
