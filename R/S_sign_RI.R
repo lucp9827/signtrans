@@ -18,7 +18,7 @@ S_sign_RI<-function(formula,data,procedure="boot",B=100) {
   est_teststat <- est_coef / sqrt(est_var)
   est_pval <- 2*pnorm(-abs(est_teststat))
   }
-  else{
+  if (procedure =="ML"){
     m  <- logistf(formula, data = data,control= logistf.control( maxit=5000), plcontrol= logistpl.control( maxit=5000))
 
     n<-dim(data)[1]
