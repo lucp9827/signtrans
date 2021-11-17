@@ -18,6 +18,46 @@ S_sign_RI<-function(formula,data,procedure="boot",B=100) {
   est_teststat <- est_coef / sqrt(est_var)
   est_pval <- 2*pnorm(-abs(est_teststat))
   }
+  else{
+    m  <- logistf(formula, data = data,control= logistf.control( maxit=5000), plcontrol= logistpl.control( maxit=5000))
+
+    n<-dim(data)[1]
+
+    newdata = data.frame(data[,-1])
+    newdata0 = data.frame(data[,-1])
+    newdata0$group = rep(0,n)
+    newdata1 = data.frame(data[,-1])
+    newdata1$group = rep(1,n)
+
+    pred<-predict(m,newdata=newdata,type="response")
+    pred0<-predict(m,newdata=newdata0,type="response")
+    pred1<-predict(m,newdata=newdata1,type="response")
+
+    Q1 <- mean(pred1)
+
+    Q0 <- mean(pred0)
+
+
+    MOR <- log((Q1 * (1 - Q0)) / ((1 - Q1) * Q0))
+
+    est_coef = MOR
+
+    # Variance estimation using efficient influence curve ! o
+
+    gW<-sum(data[,'group']==1)/length(data[,'group'])
+
+    D1 <- (covar[,'group']/gW) *(PO- pred1) + pred1 - Q1
+
+    D0 <- ((1-covar[,'group'])/(1-gW )) * (PO- pred0) + pred0 - Q0
+
+    EIC <- (1/(Q1*(1-Q1))) * D1 - (1/(Q0*(1-Q0))) * D0
+
+    est_var<-sum(EIC^2)/n^2
+
+    est_teststat<-(est_coef)/(sqrt(est_var))
+
+    pval_augsign<-2*pnorm(-abs(est_teststat))
+    }
 
 
   res <- list(Coefficients= est_coef, Variance = est_var, Teststatistic = est_teststat, Pval=est_pval)
