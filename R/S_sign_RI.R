@@ -58,7 +58,16 @@ S_sign_RI<-function(formula,data,procedure="boot",B=100) {
 
     est_pval<-2*pnorm(-abs(est_teststat))
     }
+  if (procedure =="TMLE"){
 
+    TMLE2 = tmle(Y=data[,1],A=data[,2],W==data[,3],family="binomial")
+    est_coef = TMLE2$estimates$OR$log.psi
+    est_var = TMLE2$estimates$OR$var.log.psi
+
+    est_teststat<-(est_coef)/(sqrt(est_var))
+
+    est_pval<-2*pnorm(-abs(est_teststat))
+  }
 
   res <- list(Coefficients= est_coef, Variance = est_var, Teststatistic = est_teststat, Pval=est_pval)
 
