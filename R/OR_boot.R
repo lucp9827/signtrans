@@ -28,8 +28,8 @@ OR_boot<- function(formula, data, indices) {
 
   Q0 <- mean(pred0)
 
-
-  MOR <- log((Q1 * (1 - Q0)) / ((1 - Q1) * Q0) )
+  #MOR <- log((Q1 * (1 - Q0)) / ((1 - Q1) * Q0) )
+  MOR <- (Q1 * (1 - Q0)) / ((1 - Q1) * Q0)
 
   MOR
 }
