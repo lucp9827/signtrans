@@ -60,7 +60,7 @@ S_sign_RI<-function(formula,data,procedure="boot",B=100) {
     }
   if (procedure =="TMLE"){
 
-    TMLE2 = tmle(Y=data[,1],A=data[,2],W=data[,3],family="binomial")
+    TMLE2 = tmle(Y=data$PO,A=data$group,W=data.frame(data$libsize),family="binomial")
     est_coef = TMLE2$estimates$OR$log.psi
     est_var = TMLE2$estimates$OR$var.log.psi
 
