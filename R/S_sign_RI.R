@@ -37,8 +37,8 @@ S_sign_RI<-function(formula,data,procedure="boot",B=100) {
 
     Q0 <- mean(pred0)
 
-    #MOR <- (Q1 * (1 - Q0)) / ((1 - Q1) * Q0)
-    MOR <- log((Q1 * (1 - Q0)) / ((1 - Q1) * Q0))
+# MOR <- (Q1 * (1 - Q0)) / ((1 - Q1) * Q0))
+    MOR <- log(Q1 * (1 - Q0)) / ((1 - Q1) * Q0)
 
     est_coef = MOR
 
@@ -57,8 +57,8 @@ S_sign_RI<-function(formula,data,procedure="boot",B=100) {
     est_teststat<-(est_coef)/(sqrt(est_var))
 
     est_pval<-2*pnorm(-abs(est_teststat))
-    }
-  if (procedure =="TMLE"){
+    } 
+     if (procedure =="TMLE"){
 
     TMLE2 = tmle(Y=data$PO,A=data$group,W=data.frame(data$libsize),family="binomial")
     est_coef = TMLE2$estimates$OR$log.psi
