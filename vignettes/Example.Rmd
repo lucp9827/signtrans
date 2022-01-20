@@ -28,7 +28,6 @@ Zeller G, Tap J, Voigt AY, Sunagawa S, Kultima JR, Costea PI, Amiot A, Böhm J, 
 
 library(signtrans)
 
-library(devtools) install_github("lucp9827/signtrans")
 library(phyloseq)
 library(microbiome)
 library(dacomp)
@@ -36,6 +35,8 @@ library(knitr)
 library(logistf)
 library(boot)
 library(pim)
+library(tmle)
+library(SuperLearner)
 
 # Load Data:
 
@@ -237,7 +238,7 @@ formula = PO~ factor(group) + libsize
 # Apply S_sign methods (Method = 'Marginal' or 'Conditional' or 'RI' or 'All', default = 'All')
 
 set.seed(seed=9827) # Important for bootstrap method in S_sign_RI
-S_sign_results<-S_sign(formula,db,startdata=data_final,Method="All")
+S_sign_results<-S_sign(formula,db,startdata=data_final,Method="All",procedure='TMLE')
 
 
 # Summarize results 
@@ -298,7 +299,7 @@ formula= PO~ factor(group) + libsize
 # Apply S_sign methods (Method = 'Marginal' or 'Conditional' or 'RI' or 'All', default = 'All')
 
 set.seed(seed=9827) # Important for bootstrap method in S_sign_RI
-S_sign_results_all[[i]]<-S_sign(formula,db,startdata=data_final,Method="All")
+S_sign_results_all[[i]]<-S_sign(formula,db,startdata=data_final,Method="All",procedure="ML")
 
 }
 
