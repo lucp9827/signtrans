@@ -19,7 +19,7 @@ S_sign_RI<-function(formula,data,procedure="boot",B=100) {
   est_pval <- 2*pnorm(-abs(est_teststat))
   }
   if (procedure =="ML"){
-    m  <- logistf(formula, data = data,control= logistf.control( maxit=5000), plcontrol= logistpl.control( maxit=5000))
+    m  <- logistf(formula, data = data,control= logistf.control( maxit=5000), plcontrol= logistpl.control( maxit=5000),pl=FALSE)
 
     n<-dim(data)[1]
 
@@ -57,7 +57,7 @@ S_sign_RI<-function(formula,data,procedure="boot",B=100) {
     est_teststat<-(est_coef)/(sqrt(est_var))
 
     est_pval<-2*pnorm(-abs(est_teststat))
-    } 
+    }
      if (procedure =="TMLE"){
 
     TMLE2 = tmle(Y=data$PO,A=data$group,W=data.frame(data$libsize),family="binomial")
