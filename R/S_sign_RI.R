@@ -19,7 +19,7 @@ S_sign_RI<-function(formula,data,procedure="boot",B=100) {
   est_pval <- 2*pnorm(-abs(est_teststat))
   }
   if (procedure =="ML"){
-    m  <- logistf(formula, data = data,control= logistf.control( maxit=5000), plcontrol= logistpl.control( maxit=5000),firth=TRUE)
+    m  <- logistf(formula, data = data,control= logistf.control( maxit=5000), plcontrol= logistpl.control( maxit=5000),pl=FALSE)
 
     n<-dim(data)[1]
 
@@ -37,8 +37,8 @@ S_sign_RI<-function(formula,data,procedure="boot",B=100) {
 
     Q0 <- mean(pred0)
 
-# MOR <- (Q1 * (1 - Q0)) / ((1 - Q1) * Q0))
-    MOR <- log(Q1 * (1 - Q0)) / ((1 - Q1) * Q0)
+    MOR <- (Q1 * (1 - Q0)) / ((1 - Q1) * Q0)
+    #MOR <- log(Q1 * (1 - Q0)) / ((1 - Q1) * Q0)
 
     est_coef = MOR
 
@@ -58,16 +58,6 @@ S_sign_RI<-function(formula,data,procedure="boot",B=100) {
 
     est_pval<-2*pnorm(-abs(est_teststat))
     }
-     if (procedure =="TMLE"){
-
-    TMLE2 = tmle(Y=data$PO,A=data$group,W=data.frame(data$libsize),family="binomial")
-    est_coef = TMLE2$estimates$OR$log.psi
-    est_var = TMLE2$estimates$OR$var.log.psi
-
-    est_teststat<-(est_coef)/(sqrt(est_var))
-
-    est_pval<-2*pnorm(-abs(est_teststat))
-  }
 
   res <- list(Coefficients= est_coef, Variance = est_var, Teststatistic = est_teststat, Pval=est_pval, Fit = m)
 
