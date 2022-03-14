@@ -27,9 +27,9 @@ S_sign <-function(formula, Method="All", db, startdata,procedure="boot",B=100, .
 
   # Define model matrix
 
-  mf <- model.frame(formula = formula, data=data)
-  x <- model.matrix(attr(mf,"terms"),data=mf)
-  y <- model.response(mf)
+  # mf <- model.frame(formula = formula, data=data)
+  # x <- model.matrix(attr(mf,"terms"),data=mf)
+  # y <- model.response(mf)
 
   # Apply method
 

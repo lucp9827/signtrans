@@ -37,8 +37,8 @@ S_sign_RI<-function(formula,data,procedure="boot",B=100) {
 
     Q0 <- mean(pred0)
 
-    MOR <- (Q1 * (1 - Q0)) / ((1 - Q1) * Q0)
-    #MOR <- log(Q1 * (1 - Q0)) / ((1 - Q1) * Q0)
+    #MOR <- (Q1 * (1 - Q0)) / ((1 - Q1) * Q0)
+    MOR <- log((Q1 * (1 - Q0)) / ((1 - Q1) * Q0))
 
     est_coef = MOR
 
