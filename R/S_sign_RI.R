@@ -59,7 +59,7 @@ S_sign_RI<-function(formula,data,procedure="boot",B=100) {
     est_pval<-2*pnorm(-abs(est_teststat))
     }
 
-  res <- list(Coefficients= est_coef, Variance = est_var, Teststatistic = est_teststat, Pval=est_pval, Fit = m)
+  res <- list(Coefficients= est_coef, Variance = est_var, Teststatistic = est_teststat, Pval=est_pval)
 
   return(res)
 }
