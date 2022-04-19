@@ -10,7 +10,7 @@
 OR_boot<- function(formula, data, indices) {
 
   data <- data[indices,]
-  m  <- logistf(formula, data = data,control= logistf.control( maxit=5000), plcontrol= logistpl.control( maxit=5000))
+  m  <- logistf(formula, data = data,control= logistf.control( maxit=5000), plcontrol= logistpl.control( maxit=10000))
 
   n<-dim(data)[1]
 
