@@ -23,7 +23,7 @@ R_sign_RI<-function(formula, data,alpha=0.05){
   #summary(pim.fit)
   augMW<-0
   for(i in 1:n){augMW<-augMW+sum(expit(coef[1]+t(-x[i,]+t(x[-i,]))
-                                       %*%coef[2:(dim(x)[2]+1)]))/(n*(n-1))}
+                                       %*%coef[2:(dim(x)[2]+1)]),na.rm = T)/(n*(n-1))}
   # Standard error:
   pseudo.y<-pseudo(RATIO)
   a1.hat<-sapply(A=group,pseudo.Y=pseudo.y,1:length(group),vec.a1hat)
