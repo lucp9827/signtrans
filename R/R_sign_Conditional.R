@@ -14,7 +14,7 @@ R_sign_Conditional<-function(formula,data) {
   #RATIO[is.infinite(RATIO)]<-9999999
   #RATIO[is.na(RATIO)]<-9999999
 
-  est<-pim(formula,data=data ,link="logit",estim =estimator.glm,vcov.estim = sandwich.vcov)
+  est<-pim(formula,data=na.omit(data),link="logit",estim =estimator.glm,vcov.estim = sandwich.vcov)
 
   est_coef <- coef(est)
   est_var <- vcov(est)

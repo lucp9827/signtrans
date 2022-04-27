@@ -18,7 +18,7 @@ R_sign_RI<-function(formula, data,alpha=0.05){
 
   x<-as.matrix(x)
   # Point estimate:
-  pim.fit<-pim(formula,link="logit",data=data,estim =estimator.glm,vcov.estim = sandwich.vcov)#.sub
+  pim.fit<-pim(formula,link="logit",data=na.omit(data),estim =estimator.glm,vcov.estim = sandwich.vcov)#.sub
   coef<-coef(pim.fit)
   #summary(pim.fit)
   augMW<-0
