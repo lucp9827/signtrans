@@ -33,9 +33,9 @@ S_sign_RI<-function(formula,data,procedure="boot",B=100) {
     pred0<-predict(m,newdata=newdata0,type="response")
     pred1<-predict(m,newdata=newdata1,type="response")
 
-    Q1 <- mean(pred1)
+    Q1 <- mean(pred1,na.rm=T)
 
-    Q0 <- mean(pred0)
+    Q0 <- mean(pred0,na.rm=T)
 
     #MOR <- (Q1 * (1 - Q0)) / ((1 - Q1) * Q0)
     MOR <- log((Q1 * (1 - Q0)) / ((1 - Q1) * Q0))
@@ -52,7 +52,7 @@ S_sign_RI<-function(formula,data,procedure="boot",B=100) {
 
     EIC <- (1/(Q1*(1-Q1))) * D1 - (1/(Q0*(1-Q0))) * D0
 
-    est_var<-sum(EIC^2)/n^2
+    est_var<-sum(EIC^2,na.rm=T)/n^2
 
     est_teststat<-(est_coef)/(sqrt(est_var))
 
