@@ -22,11 +22,11 @@ R_sign_RI<-function(formula, data,alpha=0.05){
   coef<-coef(pim.fit)
   #summary(pim.fit)
   augMW<-0
-  for(i in 1:n){
+  for(i in 1:1){
 
     fac = expit(coef[1]+t(-x[i,]+t(x[-i,]))%*%coef[2:(dim(x)[2]+1)])
     fac[fac=='NaN',]= 1
-    augMW<-augMW+sum(fac)/(n*(n-1))}
+    augMW<-augMW+sum(fac,na.rm = TRUE)/(n*(n-1))}
 
   # Standard error:
   pseudo.y<-pseudo(RATIO)
