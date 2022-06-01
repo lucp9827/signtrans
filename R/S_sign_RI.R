@@ -52,9 +52,9 @@ S_sign_RI<-function(formula,data,procedure="boot",B=100) {
 
     EIC <- (1/(Q1*(1-Q1))) * D1 - (1/(Q0*(1-Q0))) * D0
 
-    est_var<-sum(EIC^2,na.rm=T)/n^2
+    est_var<-sum(EIC^2,na.rm=T)/n
 
-    est_teststat<-(est_coef)/(sqrt(est_var))
+    est_teststat<-(est_coef)/(sqrt(est_var)/n)
 
     est_pval<-2*pnorm(-abs(est_teststat))
     }
