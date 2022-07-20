@@ -30,13 +30,11 @@ library(signtrans)
 
 library(phyloseq)
 library(microbiome)
-library(dacomp)
+library(RioNorm2)
 library(knitr)
 library(logistf)
 library(boot)
 library(pim)
-library(tmle)
-library(SuperLearner)
 
 # Load Data:
 
@@ -120,10 +118,9 @@ libsize_1 <- sample_sums(data_res_1)
 
 boxplot(libsize,libsize_0,libsize_1, names=c('All','Group 0',"Group 1"),ylab="Library size",main='Library size distribution')
 ```
-# 2. Select Reference frame (~DACOMP)
+# 2. Select Reference frame (~RioNorm2)
 
-We use DACOMP to select a reference frame for the analyses with the S-and R-sign methods. To choose the right median threshold, we plot the reference scores. We use the chosen median threshold to select a reference frame and compute the average of this reference frame (function = Select_Ref_frame). 
-The final output consists of a list (final) with
+We use RioNorm2 to select a reference frame for the analyses with the S-and R-sign methods. The final output consists of a list (final) with
 
 1. a phyloseq object where the reference frame is pruned out (data_final), 
 
@@ -131,28 +128,28 @@ The final output consists of a list (final) with
 
 
 **Reference:**
-Brill, B., Amir, A., & Heller, R. (2019). Testing for differential abundance in compositional counts data, with application to microbiome studies. arXiv preprint arXiv:1904.08937.
+
 
 ```{r}
 
-# The following codes are to define Median threshold 
-
-# Convert otu table to a matrix for dacomp.select_references 
-
-counts<-as(otu_table(data_res), "matrix") # input dacomp.select_references, samples HAVE to be in rows!!  
-
-# Selection reference frame to define median threshold 
-
-result.selected.references <- dacomp.select_references(counts,median_SD_threshold=1.307625,verbose = T)# Verbose = TRUE: prints computation progress
-
-# Plot the reference selection scores (can be used to better set the median SD threshold) ~2.1
-
-dacomp.plot_reference_scores(result.selected.references)
+`%notin%` <- Negate(`%in%`)
 
 
-# Select Reference frame and compute the average
+OTU_table = data.frame(otu_table(data_res))
 
-final <- Select_Ref_frame(data_res,threshold=1.307625,stat=mean)
+test = hk_find(t(OTU_table))
+
+ref = test$riOTUs_ID
+
+ref_phy = prune_taxa(ref,data_res)
+
+ref_median = apply(data.frame(otu_table(ref_phy),row.names = NULL),2,median)
+
+data_final = subset(otu_table(data_res),rownames(otu_table(data_res)) %notin% ref)
+
+data_final <- merge_phyloseq(data_final, tax_table(data_res), sample_data(data_res))
+
+
 ```
 
 
@@ -209,19 +206,18 @@ To apply the S-sign methods, we need the following:
 In this subsection, we will use the S-sign methods to test for differential abundance of 1 taxon.
 
 ```{r}
-# Define data 
-
-ref_mean = final$ref_mean
-
-data_final = final$data_final 
 
 # Define Taxon to test
 
 index <- 'd__denovo228'
 
-# Define a dataframe with raw count of 1 taxon (column 1) and the average reference frame (column 2)
+# Define Median of the count of target taxon 
 
-db <- data.frame(counts=as.vector(data_final@otu_table[,index]),ref=ref_mean) # db[,1]= count taxa, db[,2] = mean reference frame
+med_count = median(as.vector(data_final@otu_table[,index]))
+
+# Define a dataframe with raw count of 1 taxon (column 1) and the adjusted median reference frame (column 2)
+
+db <- data.frame(counts=as.vector(data_final@otu_table[,index]),ref=ref_median*(med_count/median(ref_median)),row.names = NULL) # db[,1]= count taxa, db[,2] =adjusted median reference frame
 
 # Compute Library size
   
@@ -233,12 +229,12 @@ sample_data(data_final)$libsize<-libsize
 
 # Define model to be tested 
 
-formula = PO~ factor(group) + libsize
+formula = PO~ group + libsize
 
 # Apply S_sign methods (Method = 'Marginal' or 'Conditional' or 'RI' or 'All', default = 'All')
 
 set.seed(seed=9827) # Important for bootstrap method in S_sign_RI
-S_sign_results<-S_sign(formula,db,startdata=data_final,Method="All",procedure='TMLE')
+S_sign_results<-S_sign(formula,db,startdata=data_final,Method="All")
 
 
 # Summarize results 
@@ -269,20 +265,23 @@ In this subsection, we will use the S-sign methods to test for differential abun
 
 ```{r warning=FALSE}
 
-# Define data 
-
-ref_mean = final$ref_mean
-
-data_final = final$data_final 
-
 
 S_sign_results_all<-list()
 
 for (i in (1:ntaxa(data_final))){
   
+  count=as.vector(data_final@otu_table[,i])
+
+med_count = c()
+if (median(count)==0){
+  med_count = min(count[count!=0])
+} else{
+  med_count = median(count)
+}
+  
 # Define a dataframe with raw count of 1 taxon (column 1) and the average reference frame (column 2)
 
-db <- data.frame(counts=as.vector(data_final@otu_table[,i]),ref=ref_mean) # db[,1]= count taxa, db[,2] = mean reference frame
+db <- data.frame(counts=as.vector(data_final@otu_table[,i]),ref=ref_median*(med_count/median(ref_median)),row.names = NULL) # db[,1]= count taxa, db[,2] =adjusted median reference frame
 
 # Compute Library size
   
@@ -294,7 +293,7 @@ sample_data(data_final)$libsize<-libsize
 
 # Define model to be tested 
 
-formula= PO~ factor(group) + libsize
+formula= PO~ group + libsize
 
 # Apply S_sign methods (Method = 'Marginal' or 'Conditional' or 'RI' or 'All', default = 'All')
 
@@ -379,31 +378,10 @@ To apply the R-sign methods, we need the following:
 In this subsection, we will use the R-sign methods to test for differential abundance of 1 taxon.
 
 ```{r}
-# Define data 
-
-ref_mean = final$ref_mean
-
-data_final = final$data_final 
-
-# Define Taxon to test
-
-index <- 'd__denovo228'
-
-# Define a dataframe with raw count of 1 taxon (column 1) and the average reference frame (column 2)
-
-db <- data.frame(counts=as.vector(data_final@otu_table[,index]),ref=ref_mean) # db[,1]= count taxa, db[,2] = mean reference frame
-
-# Compute Library size
-  
-libsize <- sample_sums(data_final)
-
-# Define starting sample data
-
-sample_data(data_final)$libsize<-libsize
 
 # Define model to be tested
 
-formula=RATIO~factor(group)+libsize
+formula=RATIO~group+libsize
 
 # Apply R_sign methods (Method = 'Marginal' or 'Conditional' or 'RI' or 'All', default = 'All')
 
@@ -438,20 +416,23 @@ In this subsection, we will use the R-sign methods to test for differential abun
 
 ```{r}
 
-# Define data 
-
-ref_mean = final$ref_mean
-
-data_final = final$data_final 
-
 
 R_sign_results_all<-list()
 
 for (i in (1:ntaxa(data_final))){
   
+  count=as.vector(data_final@otu_table[,i])
+
+med_count = c()
+if (median(count)==0){
+  med_count = min(count[count!=0])
+} else{
+  med_count = median(count)
+}
+  
 # Define a dataframe with raw count of 1 taxon (column 1) and the average reference frame (column 2)
 
-db <- data.frame(counts=as.vector(data_final@otu_table[,i]),ref=ref_mean) # db[,1]= count taxa, db[,2] = mean reference frame
+db <- data.frame(counts=as.vector(data_final@otu_table[,i]),ref=ref_median*(med_count/median(ref_median)),row.names = NULL) # db[,1]= count taxa, db[,2] =adjusted median reference frame
 
 # Compute Library size
   
