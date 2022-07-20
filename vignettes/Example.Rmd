@@ -124,10 +124,11 @@ We use RioNorm2 to select a reference frame for the analyses with the S-and R-si
 
 1. a phyloseq object where the reference frame is pruned out (data_final), 
 
-2. a vector with the average of the reference frame (ref_mean).  
+2. a vector with the adjusted median of the reference frame (ref_median).  
 
 
 **Reference:**
+Ma, Y., Luo, Y., & Jiang, H. (2020). A novel normalization and differential abundance test framework for microbiome data. Bioinformatics, 36(13), 3959-3965.
 
 
 ```{r}
@@ -195,7 +196,7 @@ To apply the S-sign methods, we need the following:
 
 2. startdata (data_final), which is a phyloseq object with tha raw counts of the taxa and the sample variables that will be taken into account
 
-3. dataframe (db) with the raw counts of a taxon (column 1) and the average of the reference frame (column 2)
+3. dataframe (db) with the raw counts of a taxon (column 1) and the adjusted of the reference frame (column 2)
 
 4. library size (sum of all the counts per sample), which is added to the startdata (data_final) as last sample variable 
 
@@ -367,7 +368,7 @@ To apply the R-sign methods, we need the following:
 
 2. startdata (data_final), which is a phyloseq object with tha raw counts of the taxa and the sample variables that will be taken into account
 
-3. dataframe (db) with the raw counts of a taxon (column 1) and the average of the reference frame (column 2)
+3. dataframe (db) with the raw counts of a taxon (column 1) and the adjusted median of the reference frame (column 2)
 
 4. library size (sum of all the counts per sample), which is added to the startdata (data_final) as last sample variable 
 
